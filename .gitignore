@@ -1,0 +1,23 @@
+# Entornos virtuales
+venv/
+*.venv/
+env/
+ENV/
+
+# Archivos de caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Carpetas de PyInstaller
+build/
+dist/
+*.spec
+
+# Archivos de configuración de IDEs (ejemplos)
+.vscode/
+.idea/
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
