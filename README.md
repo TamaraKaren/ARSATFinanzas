@@ -121,7 +121,5 @@ Las contribuciones son bienvenidas. Por favor, abre un "issue" para discutir cam
 
 *   Tamara Monzón Fontano
 
-## Licencia
 
-*(Opcional: Si quieres añadir una licencia, por ejemplo, MIT)*
 Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
