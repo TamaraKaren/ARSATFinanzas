@@ -5,16 +5,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 from datetime import date 
-import os # Para manejo de rutas
-import sys # Para detectar si está empaquetado
+import os 
+import sys 
 
 # --- Función para obtener la ruta correcta de los archivos (para PyInstaller) ---
 def get_path(filename):
-    """ Obtiene la ruta correcta al archivo, ya sea en desarrollo o empaquetado. """
-    if hasattr(sys, "_MEIPASS"): # Estamos en un entorno empaquetado por PyInstaller
-        # _MEIPASS es una carpeta temporal donde PyInstaller extrae los archivos
+    if hasattr(sys, "_MEIPASS"): 
         return os.path.join(sys._MEIPASS, filename)
-    # En entorno de desarrollo, buscar en la misma carpeta que el script
     return os.path.join(os.path.dirname(__file__), filename)
 
 # --- Configuración General de Streamlit y Gráficos ---
@@ -32,15 +29,19 @@ def format_value_with_si_dot_sep(value, prefix=""):
     formatted_str = val_str.replace(",", "X").replace(".", ",").replace("X", ".")
     return prefix + formatted_str
 
+def format_tick_value(value, prefix=""):
+    if pd.isna(value): return ""
+    return f"{prefix}{value:,.0f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 # --- Funciones de Carga y Procesamiento de Datos (Cacheadas) ---
 @st.cache_data 
 def cargar_y_procesar_ordenes_compra_st(ruta_archivo_oc):
-    print(f"\n>>> [OC ST] Intentando cargar Órdenes de Compra desde: {ruta_archivo_oc}")
+    # ... (Contenido COMPLETO de esta función como en la última versión que funcionó)
+    print("\n>>> [OC ST] Iniciando Procesamiento de Órdenes de Compra para Streamlit...")
     try:
         df = pd.read_csv(ruta_archivo_oc, encoding='latin1', delimiter=';')
-        print("[OC ST] Archivo de OC cargado.")
     except Exception as e:
-        st.error(f"[OC ST] Error al cargar archivo de OC: {e}")
+        st.error(f"[OC] Error al cargar archivo de OC: {e}")
         return None, None, None 
     
     df_limpio_oc = df.copy()
@@ -83,17 +84,17 @@ def cargar_y_procesar_ordenes_compra_st(ruta_archivo_oc):
 
 @st.cache_data
 def cargar_y_procesar_transferencias_st(ruta_archivo_transferencias_csv):
-    print(f"\n\n>>> [TR ST] Intentando cargar Transferencias desde: {ruta_archivo_transferencias_csv}")
+    # ... (Contenido COMPLETO de esta función como en la última versión que funcionó)
+    print("\n\n>>> [TR ST] Iniciando Procesamiento de Transferencias para Streamlit...")
     try:
         df_transferencias = pd.read_csv(ruta_archivo_transferencias_csv, encoding='latin1', dtype=str)
-        print("[TR ST] Archivo de transferencias CSV cargado.")
     except Exception as e:
-        st.error(f"[TR ST] Error al cargar archivo de transferencias: {e}")
+        st.error(f"[TR] Error al cargar archivo de transferencias: {e}")
         return None, None
 
     df_transferencias.columns = [col.strip().lower().replace(' ', '_') for col in df_transferencias.columns]
     if len(df_transferencias.columns) != 3:
-        st.error(f"[TR ST] Error: Se esperaban 3 columnas en transferencias, se encontraron {len(df_transferencias.columns)}.")
+        st.error(f"[TR] Error: Se esperaban 3 columnas en transferencias, se encontraron {len(df_transferencias.columns)}.")
         return None, None
 
     df_transferencias.columns = ['desembolso', 'fecha', 'importe'] 
@@ -124,8 +125,7 @@ def cargar_y_procesar_transferencias_st(ruta_archivo_transferencias_csv):
     print("<<< [TR ST] Fin Procesamiento de Transferencias para Streamlit.")
     return df_transferencias, df_transf_mensual
 
-# --- Carga de Datos usando get_path ---
-# Estas rutas ahora son relativas al script o al paquete del .exe
+# --- Carga de Datos ---
 ruta_oc_main = get_path("ARSAT_Finanzas_ordenes_de_compra-2022_marzo_2023.csv")
 ruta_tr_main = get_path('transferencias-recibidas-2020-v5.csv')
 
@@ -179,7 +179,7 @@ else:
 
 
 # --- Sección Principal con Pestañas ---
-tab_oc, tab_transferencias, tab_correlacion = st.tabs(["Órdenes de Compra", "Transferencias Recibidas", "Correlación"])
+tab_oc, tab_transferencias = st.tabs(["Órdenes de Compra", "Transferencias Recibidas"]) # CORREGIDO: Eliminada pestaña Correlación
 
 with tab_oc:
     st.header("Análisis de Órdenes de Compra")
@@ -266,7 +266,7 @@ with tab_oc:
                     tickvals_oc = np.linspace(min_y_val, max_y_val, num_ticks_y)
                     tickvals_oc = [v for v in tickvals_oc if pd.notna(v)] 
                     if not tickvals_oc: tickvals_oc = [0] 
-                    ticktext_oc = [f"{moneda_simbolo_oc}{val:,.0f}".replace(",", "X").replace(".", ",").replace("X", ".") for val in tickvals_oc]
+                    ticktext_oc = [format_tick_value(val, moneda_simbolo_oc) for val in tickvals_oc]
                     fig_gasto_mensual_oc.update_layout(yaxis_title=f"Importe Total", xaxis_title="Fecha", yaxis_tickvals=tickvals_oc, yaxis_ticktext=ticktext_oc)
                 else:
                     fig_gasto_mensual_oc.update_layout(yaxis_title=f"Importe Total", xaxis_title="Fecha", yaxis_tickprefix=moneda_simbolo_oc, yaxis_tickformat='~s')
@@ -276,25 +276,91 @@ with tab_oc:
         num_outliers_oc = st.slider("Número de órdenes a mostrar:", 1, 20, 5, key="oc_outliers_slider")
         top_n_ordenes_oc = df_oc_final_filtrado.nlargest(num_outliers_oc, 'importe')
         
-        top_n_ordenes_oc_display = top_n_ordenes_oc.copy()
-        if 'importe' in top_n_ordenes_oc_display.columns:
-             top_n_ordenes_oc_display['importe_formateado'] = top_n_ordenes_oc_display['importe'].apply(lambda x: f"{moneda_simbolo_oc}{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-        if 'fecha' in top_n_ordenes_oc_display.columns: 
-            if pd.api.types.is_datetime64_any_dtype(top_n_ordenes_oc_display['fecha']):
-                top_n_ordenes_oc_display['fecha_formateada'] = top_n_ordenes_oc_display['fecha'].dt.strftime('%d/%m/%Y')
-            else: 
-                try: top_n_ordenes_oc_display['fecha_formateada'] = pd.to_datetime(top_n_ordenes_oc_display['fecha']).dt.strftime('%d/%m/%Y')
-                except: top_n_ordenes_oc_display['fecha_formateada'] = top_n_ordenes_oc_display['fecha']
+        df_outliers_display = top_n_ordenes_oc.copy()
+        if 'fecha' in df_outliers_display.columns:
+            if pd.api.types.is_datetime64_any_dtype(df_outliers_display['fecha']):
+                df_outliers_display['Fecha Formateada'] = df_outliers_display['fecha'].dt.strftime('%d/%m/%Y')
+            else:
+                try: df_outliers_display['Fecha Formateada'] = pd.to_datetime(df_outliers_display['fecha']).dt.strftime('%d/%m/%Y')
+                except: df_outliers_display['Fecha Formateada'] = df_outliers_display['fecha']
+        else: df_outliers_display['Fecha Formateada'] = 'N/A'
 
-        st.dataframe(top_n_ordenes_oc_display[['fecha_formateada', 'comprobante', 'proveedor', 'descripcion_producto', 'importe_formateado', 'gerencia', 'tipocompra']].rename(columns={'fecha_formateada':'Fecha', 'importe_formateado':'Importe'}))
+        if 'importe' in df_outliers_display.columns:
+            df_outliers_display['Importe Formateado'] = df_outliers_display['importe'].apply(
+                lambda x: f"{moneda_simbolo_oc}{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if pd.notna(x) else ""
+            )
+        else: df_outliers_display['Importe Formateado'] = 'N/A'
+
+        columnas_map_outliers = {
+            'Fecha Formateada': 'Fecha',
+            'comprobante': 'Comprobante',
+            'proveedor': 'Proveedor',
+            'descripcion_producto': 'Descripcion Producto',
+            'Importe Formateado': 'Importe',
+            'gerencia': 'Gerencia',
+            'tipocompra': 'Tipocompra'
+        }
+        df_outliers_renamed = pd.DataFrame()
+        for col_original, col_nuevo in columnas_map_outliers.items():
+            if col_original in df_outliers_display.columns:
+                df_outliers_renamed[col_nuevo] = df_outliers_display[col_original]
+            # Si la columna original formateada no existe, intentar con la versión sin formatear (para columnas no fecha/importe)
+            elif col_original.replace(" Formateada", "").lower().replace(" ", "_") in df_outliers_display.columns:
+                 internal_name = col_original.replace(" Formateada", "").lower().replace(" ", "_")
+                 df_outliers_renamed[col_nuevo] = df_outliers_display[internal_name]
+
+
+        columnas_a_mostrar_final_outliers = ['Fecha', 'Comprobante', 'Proveedor', 'Descripcion Producto', 'Importe', 'Gerencia', 'Tipocompra']
+        columnas_existentes_final_outliers = [col for col in columnas_a_mostrar_final_outliers if col in df_outliers_renamed.columns]
+        
+        if not df_outliers_renamed.empty:
+            st.dataframe(df_outliers_renamed[columnas_existentes_final_outliers])
+        else:
+            st.write("No hay datos de outliers para mostrar.")
         
         st.subheader("Vista de Datos de Órdenes de Compra (Filtrados, Primeras 100)")
-        st.dataframe(df_oc_final_filtrado.head(100))
+        if not df_oc_final_filtrado.empty:
+            df_oc_vista_previa = df_oc_final_filtrado.head(100).copy()
+            
+            if 'fecha' in df_oc_vista_previa.columns:
+                if pd.api.types.is_datetime64_any_dtype(df_oc_vista_previa['fecha']):
+                    df_oc_vista_previa['fecha_display'] = df_oc_vista_previa['fecha'].dt.strftime('%d/%m/%Y')
+                else:
+                    try: df_oc_vista_previa['fecha_display'] = pd.to_datetime(df_oc_vista_previa['fecha']).dt.strftime('%d/%m/%Y')
+                    except: df_oc_vista_previa['fecha_display'] = df_oc_vista_previa['fecha']
+            else: df_oc_vista_previa['fecha_display'] = "N/A"
+            
+            if 'importe' in df_oc_vista_previa.columns:
+                 df_oc_vista_previa['importe_display'] = df_oc_vista_previa['importe'].apply(lambda x: f"{moneda_simbolo_oc}{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            else: df_oc_vista_previa['importe_display'] = "N/A"
+
+            # Seleccionar y renombrar columnas para la vista previa
+            df_oc_vista_previa_renamed = pd.DataFrame()
+            columnas_map_vista = {
+                'fecha_display': 'Fecha', 'comprobante': 'Comprobante', 'proveedor': 'Proveedor',
+                'descripcion_producto': 'Descripcion Producto', 'importe_display': 'Importe',
+                'moneda': 'Moneda', 'gerencia': 'Gerencia', 'tipocompra': 'Tipocompra'
+            }
+            columnas_ordenadas_vista = ['Fecha', 'Comprobante', 'Proveedor', 'Descripcion Producto', 'Importe', 'Moneda', 'Gerencia', 'Tipocompra']
+            
+            for col_original, col_nuevo in columnas_map_vista.items():
+                if col_original in df_oc_vista_previa.columns:
+                    df_oc_vista_previa_renamed[col_nuevo] = df_oc_vista_previa[col_original]
+                # Si la columna formateada no existe, usar la original (para columnas no fecha/importe)
+                elif col_original.replace("_display","") in df_oc_vista_previa.columns:
+                    df_oc_vista_previa_renamed[col_nuevo] = df_oc_vista_previa[col_original.replace("_display","")]
+
+
+            # Asegurar el orden y solo columnas existentes
+            columnas_existentes_vista = [col for col in columnas_ordenadas_vista if col in df_oc_vista_previa_renamed.columns]
+            st.dataframe(df_oc_vista_previa_renamed[columnas_existentes_vista])
+        else:
+            st.write("No hay datos para mostrar en la vista previa según los filtros aplicados.")
     else:
         st.warning("Seleccione un rango de fechas y moneda válidos para ver el análisis de Órdenes de Compra, o no hay datos para los filtros aplicados.")
 
 with tab_transferencias:
-    # ... (Contenido de la pestaña de transferencias, con los ajustes de formato de tabla y ejes de gráficos) ...
+    # ... (Contenido de la pestaña de transferencias, igual que antes) ...
     st.header("Análisis de Transferencias Recibidas")
     df_tr_filtrado_fecha = df_tr.copy() if df_tr is not None else pd.DataFrame()
 
@@ -370,7 +436,7 @@ with tab_transferencias:
                         tickvals_tr = np.linspace(min_y_tr_val, max_y_tr_val, num_ticks_tr)
                         tickvals_tr = [v for v in tickvals_tr if pd.notna(v)]
                         if not tickvals_tr: tickvals_tr = [0]
-                        ticktext_tr = [f"{simbolo_moneda_tr_grafico}{val:,.0f}".replace(",", "X").replace(".", ",").replace("X", ".") for val in tickvals_tr]
+                        ticktext_tr = [format_tick_value(val, simbolo_moneda_tr_grafico) for val in tickvals_tr]
                         fig_tr_mensual.update_layout(yaxis_title="Importe Total Transferido", xaxis_title="Fecha", yaxis_tickvals=tickvals_tr, yaxis_ticktext=ticktext_tr, height=400)
                     else:
                         fig_tr_mensual.update_layout(yaxis_title="Importe Total Transferido", xaxis_title="Fecha", yaxis_tickprefix=simbolo_moneda_tr_grafico, yaxis_tickformat='~s', height=400)
@@ -378,34 +444,11 @@ with tab_transferencias:
     else:
         st.warning("Seleccione un rango de fechas para ver el análisis de Transferencias o no hay datos para los filtros aplicados.")
 
-with tab_correlacion:
-    # ... (Contenido de la pestaña de correlación, igual que antes, con el formato de ejes .,.0f) ...
-    st.header("Correlación: Transferencias vs. Gasto OC (ARS)")
-    if df_oc_mensual_ars is not None and df_tr_mensual is not None:
-        df_correlacion = pd.merge(df_tr_mensual, df_oc_mensual_ars, 
-                                  left_index=True, right_index=True, how='inner')
-        
-        if not df_correlacion.empty and len(df_correlacion) > 1:
-            st.subheader("Datos Mensuales Superpuestos")
-            st.dataframe(df_correlacion)
-
-            correlacion_calculada = df_correlacion['ingreso_transferencias'].corr(df_correlacion['gasto_ordenes_ars'])
-            st.metric("Coeficiente de Correlación", f"{correlacion_calculada:.2f}")
-
-            fig_corr = px.scatter(df_correlacion, x='ingreso_transferencias', y='gasto_ordenes_ars', 
-                                  trendline="ols", title='Transferencias (ARS$) vs. Gasto Órdenes (ARS$) Mensual')
-            fig_corr.update_layout(
-                xaxis_title="Total Transferencias Recibidas por Mes (ARS$)",
-                yaxis_title="Total Gasto Órdenes por Mes (ARS$)",
-                xaxis_tickprefix="ARS$ ", yaxis_tickprefix="ARS$ ",
-                xaxis_tickformat='.,.0f', yaxis_tickformat='.,.0f' 
-            )
-            st.plotly_chart(fig_corr, use_container_width=True)
-        else:
-            st.warning("No hay suficientes datos mensuales superpuestos para calcular o visualizar la correlación.")
-    else:
-        st.info("Faltan datos mensuales de órdenes o transferencias para el análisis de correlación.")
+# --- ELIMINADA LA PESTAÑA DE CORRELACIÓN ---
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("Dashboard Interactivo de Análisis")
 st.sidebar.markdown("Creado por: Tamara Monzón Fontano")
+st.sidebar.markdown("[Mi Perfil de LinkedIn](https://www.linkedin.com/in/TamaraMonzon)")
+st.sidebar.markdown("[Mi Portafolio](https://monzonfontano.netlify.app/)")
+st.sidebar.markdown("[Mi Perfil de GitHub](https://github.com/TamaraKaren)")
