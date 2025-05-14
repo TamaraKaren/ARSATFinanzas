@@ -2,6 +2,14 @@
 
 Este proyecto realiza un análisis de datos financieros de ARSAT, enfocándose en órdenes de compra y transferencias recibidas. Incluye limpieza de datos, análisis exploratorio (EDA) con visualizaciones, y presenta los resultados en un dashboard interactivo creado con Streamlit. Adicionalmente, se proporciona una utilidad para empaquetar el dashboard como una aplicación ejecutable.
 
+## 🚀 Dashboard Interactivo en Vivo
+
+¡Explora los datos y análisis de forma interactiva!
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://tamaramonzon-arsatfinanzas-app.streamlit.app/)
+
+**Enlace directo:** [https://tamaramonzon-arsatfinanzas-app.streamlit.app/](https://tamaramonzon-arsatfinanzas-app.streamlit.app/)
+
 ## Características Principales
 
 *   **Procesamiento de Datos de Órdenes de Compra:**
@@ -121,7 +129,5 @@ Las contribuciones son bienvenidas. Por favor, abre un "issue" para discutir cam
 
 *   Tamara Monzón Fontano
 
-## Licencia
 
-*(Opcional: Si quieres añadir una licencia, por ejemplo, MIT)*
 Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
